@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { createRef, useCallback, useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View, Image, SafeAreaView } from 'react-native';
+import { WebView } from 'react-native-webview';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-react-native';
 import * as posenet from '@tensorflow-models/posenet';
@@ -8,38 +9,75 @@ import * as posenet from '@tensorflow-models/posenet';
 
 export default function App() {
 
-  const [isTFReady,setIsTFReady] = useState(false);
-  const [isPosenetReady,setIsPosenetReady] = useState(false);
+  const [isTFReady, setIsTFReady] = useState(false);
+  const [isPosenetReady, setIsPosenetReady] = useState(false);
 
-  let model:any;
+  let imageRef = useRef(null);
 
-  const onLoad = async () => {
+  let model: any;
+
+  const onLoad = useCallback(async () => {
     await tf.ready();
     setIsTFReady(true);
 
     model = await posenet.load();
     setIsPosenetReady(true);
-  }
+  },[])
+
+  let poses: any;
+  const imageScaleFactor = 0.50;
+  const flipHorizontal = false;
+  const outputStride = 16;
 
   useEffect(() => {
-    
+
     onLoad();
 
-  },[onLoad]);
+    loadPoses();
+
+  }, [onLoad]);
+
+  const loadPoses = async () => {
+
+    console.log(model,"model");
+
+    if(imageRef.current) {
+
+      poses = await model.estimateSinglePose(imageRef.current, imageScaleFactor, flipHorizontal, outputStride);
+    }
+
+
+    console.log(poses)
+
+  }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="auto" />
       <Text>
 
         TF Ready? {isTFReady ? 'Yes' : 'Loading...'}
-        
+
       </Text>
       <Text>
 
         Posenet Ready? {isPosenetReady ? 'Yes' : 'Loading...'}
-        
+
       </Text>
-    </View>
+
+      <Image
+        ref={imageRef}
+        source={require('./assets/persons.png')}
+        style={{
+          // width: 360,
+          height: 500,
+          resizeMode: 'contain'
+        }}
+      />
+
+  
+
+    </SafeAreaView>
   );
 }
 
